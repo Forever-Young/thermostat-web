@@ -1,0 +1,3 @@
+\.py[co]$
+^static/*
+^db.sqlite$
