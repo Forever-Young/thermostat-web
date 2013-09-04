@@ -43,8 +43,8 @@ class Command(BaseCommand):
                 TempHistory.objects.create(datetime=datetime.utcnow(), temp=temp, state=state)
 
                 settings = TempSettings.load()
-                ser.write('sl{:d} '.format(settings.low_boundary))
-                ser.write('sh{:d} '.format(settings.high_boundary))
+                ser.write('sl{:d} '.format(int(settings.low_boundary * 10)))
+                ser.write('sh{:d} '.format(int(settings.high_boundary * 10)))
             except TimeoutException:
                 ser.close()
                 n += 1
