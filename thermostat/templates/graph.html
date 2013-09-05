@@ -1,7 +1,98 @@
 {% extends "base.html" %}
+{% load static from staticfiles %}
 {% load bootstrap %}
+{% block title %}Temperature graphs{% endblock %}
 {% block menu %}
     {% include "include_menu.html" with active_tab='graph'%}
 {% endblock %}
 {% block content %}
+    <div id="chartContainer" style="max-width:800px;height: 400px;"></div>
+{% endblock %}
+{% block extrajs %}
+    <script src="{% static 'js/knockout-2.2.1.js' %}"></script>
+    <script src="{% static 'js/globalize.min.js' %}"></script>
+    <script src="{% static 'js/dx.chartjs.js' %}"></script>
+    <script src="{% static 'js/jstz.min.js' %}"></script>
+    <script>
+        if ( !Date.prototype.toISOString ) {
+            ( function() {
+
+            function pad(number) {
+              var r = String(number);
+              if ( r.length === 1 ) {
+                r = '0' + r;
+              }
+              return r;
+            }
+            Date.prototype.toISOString = function() {
+              return this.getUTCFullYear()
+                + '-' + pad( this.getUTCMonth() + 1 )
+                + '-' + pad( this.getUTCDate() )
+                + 'T' + pad( this.getUTCHours() )
+                + ':' + pad( this.getUTCMinutes() )
+                + ':' + pad( this.getUTCSeconds() )
+                + '.' + String( (this.getUTCMilliseconds()/1000).toFixed(3) ).slice( 2, 5 )
+                + 'Z';
+            };
+
+            }() );
+        }
+        function update(begin, end, title) {
+            $.ajax({
+                url: "{% url 'graph_data' %}",
+                cache: false,
+                data: {
+                    begin: begin.toISOString(),
+                    end: end.toISOString(),
+                    tz: jstz.determine().name()
+                },
+                success: function(data) {
+                    var chart = $("#chartContainer").dxChart('instance');
+                    chart.option('dataSource', data.points);
+                    var len = data.heating_periods.length;
+                    for(var i = 0; i < len; i++) {
+                        data.heating_periods[i].startValue = new Date(data.heating_periods[i].startValue);
+                        data.heating_periods[i].endValue = new Date(data.heating_periods[i].endValue);
+                    }
+                    chart.option('argumentAxis.strips', data.heating_periods);
+                    chart.option('title', title);
+                }
+            });
+        }
+        $(function () {
+            $("#chartContainer").dxChart({
+                commonAxisSettings: {
+                    stripStyle: {
+                        color: 'rgba(239, 61, 71, 0.2)',
+                    }
+                },
+                commonSeriesSettings: {
+                    argumentField: 'datetime',
+                },
+                series: {
+                    type: 'spline',
+                    point: {visible: false},
+                    valueField: 'temp',
+                },
+                tooltip: {
+                    enabled: true
+                },
+                argumentAxis: {
+                    argumentType: 'datetime',
+                    title: 'Date/Time'
+                },
+                valueAxis: {
+                    title: 'Temperature'
+                },
+                legend: {
+                    visible: false
+                }
+            });
+            var today, minus;
+            today = new Date();
+            minus = new Date();
+            minus.setHours(minus.getHours() - 24);
+            update(minus, today, 'Last 24 hours');
+        });
+    </script>
 {% endblock %}

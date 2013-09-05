@@ -7,7 +7,8 @@ from django.conf.urls import patterns, include, url
 urlpatterns = patterns('',
     # Examples:
     url(r'^$', 'thermostat.views.control', name='control'),
-    # url(r'^graph/$', 'thermostat.views.graph', name='graph'),
+    url(r'^graph/$', 'thermostat.views.graph', name='graph'),
+    url(r'^graph_data/$', 'thermostat.views.graph_data', name='graph_data'),
 
     # Uncomment the admin/doc line below to enable admin documentation:
     # url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
