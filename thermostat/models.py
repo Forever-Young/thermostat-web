@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 from singleton import SingletonModel
 
@@ -40,3 +42,24 @@ class TempSettings(SingletonModel):
     class Meta:
         verbose_name = 'Temperature settings'
         verbose_name_plural = 'Temperature settings'
+
+
+class TempSettingsHistory(models.Model):
+    low_boundary = models.FloatField(verbose_name='Low boundary')
+    high_boundary = models.FloatField(verbose_name='High boundary')
+    datetime = models.DateTimeField(verbose_name='Date-time', auto_now_add=True)
+
+    def __unicode__(self):
+        return "Low {:.2f}, High {:.2f}, Date {}'".format(self.low_boundary, self.high_boundary, self.datetime)
+
+    class Meta:
+        verbose_name = 'Temperature settings history record'
+        verbose_name_plural = 'Temperature settings history records'
+
+
+@receiver(post_save, sender=TempSettings)
+def save_history(**kwargs):
+    TempSettingsHistory.objects.create(
+        low_boundary=kwargs["instance"].low_boundary,
+        high_boundary=kwargs["instance"].high_boundary
+    )

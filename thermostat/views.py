@@ -10,7 +10,7 @@ from django.contrib import messages
 from django.http import HttpResponse
 
 from .forms import TempSettingsForm
-from .models import TempSettings, TempHistory
+from .models import TempSettings, TempHistory, TempSettingsHistory
 
 
 def control(request):
@@ -27,12 +27,12 @@ def control(request):
         "cur_state": TempHistory.cur_state(),
     }
     return render_to_response("control.html", data,
-        context_instance=RequestContext(request))
+                              context_instance=RequestContext(request))
 
 
 def graph(request):
     return render_to_response("graph.html", {},
-        context_instance=RequestContext(request))
+                              context_instance=RequestContext(request))
 
 
 class _DateTimeJSONEncoder(json.JSONEncoder):
@@ -48,6 +48,7 @@ def _dumpjson(data):
 
 
 def graph_data(request):
+    import datetime  # TODO: why import in the beginning of file doesn't work?
     begin = request.GET.get("begin")
     end = request.GET.get("end")
     tz = request.GET.get("tz")
@@ -55,22 +56,36 @@ def graph_data(request):
     begin = dateutil.parser.parse(begin).replace(tzinfo=None)  # to naive datetime for SQLite
     end = dateutil.parser.parse(end).replace(tzinfo=None)
     tz = dateutil.zoneinfo.gettz(tz)
-    points = list(TempHistory.objects.filter(datetime__gte=begin, datetime__lte=end).values('datetime', 'temp', 'state').order_by('datetime'))
+    points = list(TempHistory.objects.filter(datetime__gte=begin, datetime__lte=end).order_by('datetime')
+                  .values('datetime', 'temp', 'state'))
 
-    heating_periods = []
+    boundaries = list(TempSettingsHistory.objects.filter(datetime__gte=begin, datetime__lte=end).order_by('datetime')
+                      .values('datetime', 'low_boundary', 'high_boundary'))
+    bound_before = TempSettingsHistory.objects.order_by('-datetime').filter(datetime__lt=begin)
+    if len(bound_before) > 0:
+        boundaries.insert(0, bound_before[0:1]
+                          .values('datetime', 'low_boundary', 'high_boundary')[0])  # TODO: optimize?
+    else:
+        settings = TempSettings.load()
+        boundaries.insert(0, {
+            'datetime': begin - datetime.timedelta(seconds=1),
+            'low_boundary': settings.low_boundary,
+            'high_boundary': settings.high_boundary,
+        })
 
     utc = tzutc()
-    for point in points:
-        point['datetime'] = point['datetime'].replace(tzinfo=utc).astimezone(tz)
+    for item in points:
+        item['datetime'] = item['datetime'].replace(tzinfo=utc).astimezone(tz)
+    for item in boundaries:
+        item['datetime'] = item['datetime'].replace(tzinfo=utc).astimezone(tz)
 
+    heating_periods = []
     prev = start = end = None
     for point in points:
         if prev:
             if point['state'] == '0':
                 heating_periods.append({'startValue': start, 'endValue': end})
-                prev = start = end = None
-            else:
-                end = point['datetime']
+                prev = start = None
         else:
             if point['state'] == '1':
                 start = point['datetime']
@@ -81,6 +96,7 @@ def graph_data(request):
 
     # thin out array
     MAX_POINTS = 100
+    cur_boundary_i = 0
     if len(points) > MAX_POINTS:
         ratio = len(points) // MAX_POINTS
         thinout_points = []
@@ -91,7 +107,12 @@ def graph_data(request):
                 temp += item['temp']
             temp /= ratio
             temp = round(temp, 2)
-            thinout_points.append({'datetime': datetime, 'temp': temp})
+            if cur_boundary_i + 1 < len(boundaries):
+                if boundaries[cur_boundary_i + 1]['datetime'] <= datetime:
+                    cur_boundary_i += 1
+            thinout_points.append({'datetime': datetime, 'temp': temp,
+                                   'low_boundary': boundaries[cur_boundary_i]['low_boundary'],
+                                   'high_boundary': boundaries[cur_boundary_i]['high_boundary']})
         points = thinout_points
 
     data = {

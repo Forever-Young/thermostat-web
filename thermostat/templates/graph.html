@@ -69,24 +69,30 @@
                 commonSeriesSettings: {
                     argumentField: 'datetime',
                 },
-                series: {
-                    type: 'spline',
-                    point: {visible: false},
-                    valueField: 'temp',
-                },
+                series: [
+                    {
+                        name: 'Temperature',
+                        type: 'spline',
+                        point: {visible: false},
+                        valueField: 'temp',
+                    },
+                    {
+                        name: 'Boundaries',
+                        type: 'rangearea',
+                        rangeValue1Field: 'low_boundary',
+                        rangeValue2Field: 'high_boundary',
+                    }
+                ],
                 tooltip: {
                     enabled: true
                 },
                 argumentAxis: {
                     argumentType: 'datetime',
-                    title: 'Date/Time'
+                    title: 'Date/Time',
                 },
                 valueAxis: {
                     title: 'Temperature'
                 },
-                legend: {
-                    visible: false
-                }
             });
             var today, minus;
             today = new Date();
