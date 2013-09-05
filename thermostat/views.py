@@ -61,14 +61,14 @@ def graph_data(request):
 
     boundaries = list(TempSettingsHistory.objects.filter(datetime__gte=begin, datetime__lte=end).order_by('datetime')
                       .values('datetime', 'low_boundary', 'high_boundary'))
-    bound_before = TempSettingsHistory.objects.order_by('-datetime').filter(datetime__lt=begin)
+    bound_before = TempSettingsHistory.objects.order_by('-datetime').filter(datetime__lt=begin)\
+        .values('datetime', 'low_boundary', 'high_boundary')
     if len(bound_before) > 0:
-        boundaries.insert(0, bound_before[0:1]
-                          .values('datetime', 'low_boundary', 'high_boundary')[0])  # TODO: optimize?
+        boundaries.insert(0, bound_before[0])
     else:
         settings = TempSettings.load()
         boundaries.insert(0, {
-            'datetime': begin - datetime.timedelta(seconds=1),
+            'datetime': begin - datetime.timedelta(hours=24),
             'low_boundary': settings.low_boundary,
             'high_boundary': settings.high_boundary,
         })
