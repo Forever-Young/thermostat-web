@@ -51,4 +51,4 @@ class Command(BaseCommand):
             else:
                 break
         if n == MAX:
-            sys.stdeff.write('Error syncing with thermostat')
+            sys.stderr.write('Error syncing with thermostat')
