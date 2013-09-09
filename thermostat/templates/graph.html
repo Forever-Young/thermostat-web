@@ -97,8 +97,8 @@
             var today, minus;
             today = new Date();
             minus = new Date();
-            minus.setHours(minus.getHours() - 24);
-            update(minus, today, 'Last 24 hours');
+            minus.setHours(minus.getHours() - 12);
+            update(minus, today, 'Last 12 hours');
         });
     </script>
 {% endblock %}

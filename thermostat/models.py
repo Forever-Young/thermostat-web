@@ -8,7 +8,7 @@ from singleton import SingletonModel
 class TempHistory(models.Model):
     datetime = models.DateTimeField(verbose_name='Date-time')
     temp = models.FloatField(verbose_name='Temperature')
-    state = models.CharField(max_length=1, verbose_name='Boiler state', help_text='1 - on, 0 - off, "." - state unchanged')
+    state = models.CharField(max_length=1, verbose_name='Boiler state', help_text='1 - on, 0 - off')
 
     def __unicode__(self):
         return "{}, temp {:.2f}, state '{}'".format(self.datetime, self.temp, self.state)
@@ -23,7 +23,7 @@ class TempHistory(models.Model):
     @classmethod
     def cur_state(cls):
         try:
-            return cls.objects.order_by('-datetime').exclude(state='.')[0].state
+            return cls.objects.order_by('-datetime')[0].state
         except IndexError:
             return "No data"
 
